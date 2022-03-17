@@ -1,7 +1,8 @@
+import gzip
 import json
-import time
 import socket
 import sys
+import time
 from http import HTTPStatus
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from io import BytesIO
@@ -55,18 +56,25 @@ class Handler(SimpleHTTPRequestHandler):
         msg = Handler.parse_file(b"".join(buf), boundary.encode("utf-8"))
         try:
             now = time.time()
-            json = pdf2json(BytesIO(msg))
+            json = pdf2json(BytesIO(msg)).encode("utf-8")
             delta = time.time() - now
             self.log_message(f"Converted PDF in {delta:.6f} seconds")
         except pdftotext.Error as e:
             self.send_error(HTTPStatus.INTERNAL_SERVER_ERROR, "Invalid PDF", str(e))
             return
 
+        json_zip = gzip.compress(json)
+        cmp_ratio = 1 - (len(json_zip) / len(json))
+        # NOTE: Need to escape '%' since `log_message` treats it as a format
+        # string.
+        self.log_message(f"Compressed JSON by {cmp_ratio:.2%}".replace("%", "%%"))
+
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(json)))
+        self.send_header("Content-Encoding", "gzip")
+        self.send_header("Content-Length", str(len(json_zip)))
         self.end_headers()
-        self.wfile.write(json.encode("utf-8"))
+        self.wfile.write(json_zip)
 
     @staticmethod
     def parse_file(msg: bytes, boundary: bytes) -> bytes:
