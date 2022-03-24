@@ -25,7 +25,8 @@ chapters = ['introduction', 'phonology', 'word classes', 'morphology', 'np struc
 
 explanations = ['dialectal', 'contact/borrowing/loan', 'age', 'register', 'gender',
     'class/profession', 'unclear', 'no explanation', 'social or socio-economic', 'out-group',
-    'natural', 'historic', 'speech rate', 'speaker variation', 'free variation']
+    'natural', 'historic', 'speech rate', 'speaker variation', 'free variation', 'competence',
+    'levels of lexicalization', 'contact']
 
 def check_column_headers(df):
     # Check column headers for consistency
@@ -47,33 +48,43 @@ def setup_cat_dict():
 
 def analyze_categories(values, chap_values, exp_values, cat_dict):
     file_cat_dict = setup_cat_dict()
-    for index, cat in enumerate(values):
-        row_num = index + 2
-        chapter = chap_values[index]
-        explanation = exp_values[index]
-        lower_chap = chapter.lower()
-        if np.isnan(explanation):
-            explanation = lower_exp = 'no explanation'
-        else:
-            print(explanation)
-            lower_exp = explanation.lower()
-        if cat == 0:
+    for index, category in enumerate(values):
+        if category == 0:
             lower_cat = 'general'
         else:
-            lower_cat = cat.lower().rstrip()
-            if lower_cat not in categories:
-                lower_cat = 'uncategorized'
-        if lower_chap not in chapters:
-            lower_chap = 'n/a'
-        
-        cat_dict['totals'][lower_cat]['count'] += 1
-        cat_dict['totals'][lower_cat]['chapters'][lower_chap] += 1
-        cat_dict['totals'][lower_cat]['explanations for variation'][lower_exp] += 1
-        
-        file_cat_dict[lower_cat]['count'] += 1
-        file_cat_dict[lower_cat]['chapters'][lower_chap] += 1
-        file_cat_dict[lower_cat]['explanations for variation'][lower_exp] += 1
-        
+            cats = re.split(',\s*', category)
+            for cat in cats:
+                row_num = index + 2
+                chapter = chap_values[index]
+                explanation = exp_values[index]
+                lower_chap = chapter.lower()
+                if not isinstance(explanation, str) and np.isnan(explanation):
+                    explanation = lower_exp = 'no explanation'
+                else:
+                    lower_exp = explanation.lower()
+                if cat == 0:
+                    lower_cat = 'general'
+                else:
+                    lower_cat = cat.lower().rstrip()
+                    if lower_cat not in categories:
+                        lower_cat = 'uncategorized'
+                if lower_chap not in chapters:
+                    lower_chap = 'n/a'
+
+                cat_dict['totals'][lower_cat]['count'] += 1
+                cat_dict['totals'][lower_cat]['chapters'][lower_chap] += 1
+
+                exps = re.split(',\s*', lower_exp)
+                if lower_exp != 'no explanation':
+                    exps = re.split(',\s*', lower_exp)
+                    for exp in exps:
+                        exp = exp.strip()
+                        cat_dict['totals'][lower_cat]['explanations for variation'][exp] += 1
+                        file_cat_dict[lower_cat]['explanations for variation'][exp] += 1
+
+                       file_cat_dict[lower_cat]['count'] += 1
+                file_cat_dict[lower_cat]['chapters'][lower_chap] += 1
+
     return dict(sorted(file_cat_dict.items(), key=lambda item: item[1]['count'], reverse=True))
 
 def get_keywords(values, keyword_dict):
@@ -101,16 +112,16 @@ if __name__ == "__main__":
         'totals': setup_cat_dict(),
         'spreadsheets': {}
     }
-    
+
     keyword_dict = {
         'totals': {},
         'spreadsheets': {}
     }
-    
+
     for filename in os.listdir(loc):
         # DataFrame object
         df = pd.read_excel(os.path.join(loc, filename))
-        df.columns = [x.lower() for x in df.columns]
+        df.columns = [x.lower().rstrip() for x in df.columns]
 
         print(f"\n..Checking for Category names in {filename}")
         cat_values = df.get('category')
@@ -121,14 +132,14 @@ if __name__ == "__main__":
             cat_dict['spreadsheets'][filename] = analyze_categories(cat_values, chap_values, exp_values, cat_dict)
         else:
             print("CATEGORY COLUMN DOES NOT EXIST")
-        
+
         print(f"\n..Checking for keywords in {filename}")
         keyword_values = df.get('keyword')
         if keyword_values.any():
             keyword_dict['spreadsheets'][filename] = get_keywords(keyword_values, keyword_dict)
         else:
             print("KEYWORD COLUMN DOES NOT EXIST")
-            
+
         print("\n---\n")
         
         
