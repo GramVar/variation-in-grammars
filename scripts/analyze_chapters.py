@@ -5,7 +5,7 @@ import re
 from collections import namedtuple
 
 # CHANGE THIS FILE PATH TO YOUR FOLDER WITH THE GRAMMAR SPREADSHEETS
-loc = (r"C:\..\Spreadsheets")
+loc = (r"../Spreadsheets")
 
 col_labels = ['phenomenon id', 'description', 'category', 'page number', 'chapter',
     'comment', 'explanation for variation', 'keyword', 'cross-ref/chapter', 'page cross-ref']
@@ -16,16 +16,16 @@ ColumnLabels = namedtuple('ColumnLabels', (
 
 categories = ['phonetic', 'syllabic', 'grammatical word form', 'lexical word form',
     'word set alternation', 'inflectional affixes', 'derivational affixes', 'gender',
-    'syntactic', 'historical', 'orthographic', 'general']
+    'syntactic', 'historical', 'orthographic', 'general', 'functional interpretation']
 
 chapters = ['introduction', 'phonology', 'word classes', 'morphology', 'np structure',
     'vp structure', 'clause structure', 'complex clauses', 'lexicon appendix',
-    'text appendix', 'variation', 'n/a']
+    'text appendix', 'variation', 'n/a', 'discourse/pragmatics', 'semantics']
 
 explanations = ['dialectal', 'contact/borrowing/loan', 'age', 'register', 'gender',
     'class/profession', 'unclear', 'no explanation', 'social or socio-economic', 'out-group',
     'natural', 'historic', 'speech rate', 'speaker variation', 'free variation', 'competence',
-    'levels of lexicalization', 'contact']
+    'articulatory']
 
 def check_column_headers(df):
     # Check column headers for consistency
@@ -84,12 +84,11 @@ def analyze_categories(values, chap_values, exp_values, keyword_values, cat_dict
             file_cat_dict[lower_cat]['chapters'][lower_chap] += 1
 
             # Like category column, explanation column can have multiple comma-separated values
-            if lower_exp != 'no explanation':
-                exps = re.split(',\s*', lower_exp)
-                for exp in exps:
-                    exp = exp.strip()
-                    cat_dict['totals'][lower_cat]['explanations for variation'][exp] += 1
-                    file_cat_dict[lower_cat]['explanations for variation'][exp] += 1
+            exps = re.split(',\s*', lower_exp)
+            for exp in exps:
+                exp = exp.strip()
+                cat_dict['totals'][lower_cat]['explanations for variation'][exp] += 1
+                file_cat_dict[lower_cat]['explanations for variation'][exp] += 1
 
             words = keyword_values[index]
             # Same with keywords as with explanations
