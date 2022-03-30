@@ -45,6 +45,17 @@ def setup_cat_dict():
         file_cat_dict[category]['keywords'] = {}
     return file_cat_dict
 
+def get_chapter_explanation_totals(chap_values, exp_values, chapter_dict, explanation_dict):
+    for chap in chap_values:
+        chap_lower = chap.lower()
+        chapter_dict['totals'][chap_lower] += 1
+    for exp_value in exp_values:
+        exp_lower = exp_value.lower()
+        exps = re.split(',\s*', exp_lower)
+        for exp in exps:
+            exp = exp.strip()
+            explanation_dict['totals'][exp] += 1
+
 def analyze_categories(values, chap_values, exp_values, keyword_values, cat_dict):
     # Initialize spreadsheet JSON object
     file_cat_dict = setup_cat_dict()
@@ -136,6 +147,14 @@ if __name__ == "__main__":
         'spreadsheets': {}
     }
 
+    chapter_dict = {
+        'totals': dict.fromkeys(chapters, 0)
+    }
+
+    explanation_dict = {
+        'totals': dict.fromkeys(explanations, 0)
+    }
+
     keyword_dict = {
         'totals': {},
         'spreadsheets': {}
@@ -164,6 +183,8 @@ if __name__ == "__main__":
         else:
             print("KEYWORD COLUMN DOES NOT EXIST")
 
+        get_chapter_explanation_totals(chap_values, exp_values, chapter_dict, explanation_dict)
+
         print("\n---\n")
         
         
@@ -171,6 +192,8 @@ if __name__ == "__main__":
     cat_dict['totals'] = dict(sorted(cat_dict['totals'].items(), key=lambda item: item[1]['count'], reverse=True))
     final_dict = {
         'categories': cat_dict,
+        'chapters': chapter_dict,
+        'explanations': explanation_dict,
         'keywords': keyword_dict
     }
     print(final_dict)
