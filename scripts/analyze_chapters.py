@@ -16,7 +16,8 @@ ColumnLabels = namedtuple('ColumnLabels', (
 
 categories = ['phonetic', 'syllabic', 'grammatical word form', 'lexical word form',
     'word set alternation', 'inflectional affixes', 'derivational affixes', 'gender',
-    'syntactic', 'historical', 'orthographic', 'general', 'functional interpretation']
+    'syntactic', 'historical', 'orthographic', 'general', 'functional interpretation',
+    'semantics']
 
 chapters = ['introduction', 'phonology', 'word classes', 'morphology', 'np structure',
     'vp structure', 'clause structure', 'complex clauses', 'lexicon appendix',
@@ -160,6 +161,7 @@ if __name__ == "__main__":
         'spreadsheets': {}
     }
 
+    total_cats = 0
     for filename in os.listdir(loc):
         # DataFrame object
         df = pd.read_excel(os.path.join(loc, filename))
@@ -172,6 +174,7 @@ if __name__ == "__main__":
         exp_values = df.get('explanation for variation')
         keyword_values = df.get('keyword')
         if cat_values.any() and desc_values.any():
+            total_cats += len(cat_values)
             cat_dict['spreadsheets'][filename] = analyze_categories(
                 cat_values, chap_values, exp_values, keyword_values, cat_dict)
         else:
@@ -187,10 +190,13 @@ if __name__ == "__main__":
 
         print("\n---\n")
         
-        
+    # Sort all of the dictionaries at their top levels
     keyword_dict['totals'] = dict(sorted(keyword_dict['totals'].items(), key=lambda item: item[1], reverse=True))
     cat_dict['totals'] = dict(sorted(cat_dict['totals'].items(), key=lambda item: item[1]['count'], reverse=True))
+    chapter_dict['totals'] = dict(sorted(chapter_dict['totals'].items(), key=lambda item: item[1], reverse=True))
+    explanation_dict['totals'] = dict(sorted(explanation_dict['totals'].items(), key=lambda item: item[1], reverse=True))
     final_dict = {
+        'total_phenomena': total_cats,
         'categories': cat_dict,
         'chapters': chapter_dict,
         'explanations': explanation_dict,

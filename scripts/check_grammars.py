@@ -11,7 +11,7 @@ col_labels = ['phenomenon id', 'description', 'category', 'page number', 'chapte
     
 categories = ['phonetic', 'syllabic', 'grammatical word form', 'lexical word form',
     'word set alternation', 'inflectional affixes', 'derivational affixes', 'gender',
-    'syntactic', 'historical', 'orthographic', 'functional interpretation']
+    'syntactic', 'historical', 'orthographic', 'functional interpretation', 'semantics']
 
 chapters = ['introduction', 'phonology', 'word classes', 'morphology', 'np structure',
     'vp structure', 'clause structure', 'complex clauses', 'lexicon appendix',
