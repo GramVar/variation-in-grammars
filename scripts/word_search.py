@@ -1,9 +1,9 @@
-import pprint
+import argparse
 import json
 import re
 import string
-import sys
 from collections import namedtuple
+from pathlib import Path
 
 # TODOs:
 # Find context across page boundaries
@@ -12,31 +12,48 @@ from collections import namedtuple
 
 CONTEXT_WIDTH = 25
 
-keywords = ('varia.*', 'alternat.*', 'borrow.*', 'speaker.*', 'option.*', 'variety', 'varies', 'various', 'vary',
-    'deviat.*', 'consultants?', 'loan.*', 'judgements?', 'dialects?', 'contacts?', 'slang', 'registers?',
-    'colloquial', 'vernacular', '(non)?standard', 'competence', 'ages?', 'shift.*')
-    
-SearchResult = namedtuple('SearchResult', ('page_idx', 'word', 'word_idx', 'context'))
-MergedResult = namedtuple('MergedResult', ('page_idx', 'words', 'word_idxs', 'context'))
+SearchResult = namedtuple("SearchResult", ("page_idx", "word", "word_idx", "context"))
+MergedResult = namedtuple("MergedResult", ("page_idx", "words", "word_idxs", "context"))
+
+
+def parse_keywords(kwfile):
+    with open(kwfile, encoding="utf-8") as f:
+        return [line.strip() for line in f]
+
 
 def search_to_merged(result):
-    return MergedResult(result.page_idx, [result.word], [result.word_idx], result.context)
+    return MergedResult(
+        result.page_idx,
+        [result.word],
+        [result.word_idx],
+        result.context,
+    )
+
 
 def split_words(page):
     words = [word.strip(string.punctuation) for word in page.split()]
     return words
 
-def search_for_words(pages):
+
+def search_for_words(pages, keywords):
     results = []
     for ind, page in enumerate(pages):
         words = split_words(page)
         for word_ind, word in enumerate(words):
-            if any(re.fullmatch(keyword, word, flags=re.IGNORECASE) for keyword in keywords):
-                context = words[max(word_ind - CONTEXT_WIDTH, 0) : word_ind + CONTEXT_WIDTH]
+            if any(
+                re.fullmatch(keyword, word, flags=re.IGNORECASE) for keyword in keywords
+            ):
+                lookback = max(word_ind - CONTEXT_WIDTH, 0)
+                lookahead = word_ind + CONTEXT_WIDTH
+                context = words[lookback:lookahead]
                 results.append(SearchResult(ind, word, word_ind, list(context)))
     return merge_contexts(results)
- 
+
+
 def merge_contexts(search_results):
+    if search_results == []:
+        return []
+
     merged_results = [search_to_merged(search_results[0])]
     for result in search_results[1:]:
         last_merged = merged_results[-1]
@@ -53,20 +70,45 @@ def merge_contexts(search_results):
         else:
             merged_results.append(search_to_merged(result))
     return merged_results
-    
+
+
 def format_result(result):
     return f'{", ".join(result.words)} (Page {result.page_idx + 1})\n{" ".join(result.context)}'
-    
+
+
 def format_results(results):
-    return '\n\n'.join(map(format_result, results))
-                
+    return "\n\n".join(map(format_result, results))
+
+
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        sys.exit(f"Usage: {sys.argv[0]} file")
-        
-    with open(sys.argv[1], "rb") as f:
+    parser = argparse.ArgumentParser(description="Search for keywords.")
+    parser.add_argument(
+        "file",
+        type=str,
+        help="a JSON file to search",
+    )
+    parser.add_argument(
+        "keywords",
+        type=str,
+        help="keywords to search for (one regex per line)",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        help="the file to write search results (defaults to <input file>.txt)",
+    )
+    args = parser.parse_args()
+
+    with open(args.file, "rb") as f:
         pages = json.load(f)
-    results = search_for_words(pages)
-    with open('Jamsay.txt', 'w', encoding='utf-8') as f:
+    keywords = parse_keywords(args.keywords)
+
+    results = search_for_words(pages, keywords)
+
+    out = (
+        args.output if args.output is not None else Path(args.file).with_suffix(".txt")
+    )
+    with open(out, "w", encoding="utf-8") as f:
         f.write(format_results(results))
-    print(len(results))
+    print(f"{len(results)} search results written to {out}")

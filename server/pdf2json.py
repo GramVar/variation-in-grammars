@@ -1,3 +1,4 @@
+import argparse
 import gzip
 import json
 import socket
@@ -6,6 +7,7 @@ import time
 from http import HTTPStatus
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from io import BytesIO
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 import pdftotext  # type: ignore
@@ -25,6 +27,14 @@ def find_ip() -> Optional[str]:
 
 def pdf2json(pdf: BytesIO) -> str:
     return json.dumps(list(pdftotext.PDF(pdf)))
+
+
+def parse_local(pdf: Path, out: Optional[Path]):
+    json = pdf2json(BytesIO(pdf.read_bytes()))
+    if out is None:
+        print(json)
+    else:
+        out.write_text(json)
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -88,8 +98,35 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Convert PDF to JSON.")
+    parser.add_argument(
+        "-p",
+        "--port",
+        type=int,
+        default=80,
+        help="port number",
+    )
+    parser.add_argument(
+        "file",
+        nargs="?",
+        type=Path,
+        help="file to convert locally (optional)",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=Path,
+        help="where to write output (defaults to stdout)",
+    )
+    args = parser.parse_args()
+
+    pdf = args.file
+    if pdf is not None:
+        parse_local(pdf, args.output)
+        sys.exit()
+
     host = find_ip()
-    port = 80 if len(sys.argv) < 2 else int(sys.argv[1])
+    port = args.port
 
     if host is None:
         host = "0.0.0.0"
